@@ -20,6 +20,10 @@ aws ecr get-login-password --region "$REGION" | docker login --username AWS --pa
 docker build --platform linux/amd64 -t "$REGISTRY/$NAME:latest" .
 docker push "$REGISTRY/$NAME:latest"
 
+echo "==> ECS service-linked role (new accounts don't have it until ECS is first used)"
+aws iam get-role --role-name AWSServiceRoleForECS >/dev/null 2>&1 \
+  || aws iam create-service-linked-role --aws-service-name ecs.amazonaws.com >/dev/null
+
 echo "==> Task execution role (lets ECS pull from ECR and write logs)"
 if ! aws iam get-role --role-name ecsTaskExecutionRole >/dev/null 2>&1; then
   aws iam create-role --role-name ecsTaskExecutionRole --assume-role-policy-document \
