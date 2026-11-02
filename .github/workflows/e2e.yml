@@ -14,20 +14,10 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Load AWS credentials
-        env:
-          AWS_CREDENTIALS: ${{ secrets.AWS_CREDENTIALS }}   # stored as ACCESS_KEY_ID:SECRET_ACCESS_KEY
-        run: |
-          CREDS=$(printf '%s' "$AWS_CREDENTIALS" | tr -d '\r\n\t ')
-          KEY_ID="${CREDS%%:*}"
-          SECRET="${CREDS#*:}"
-          echo "key id length: ${#KEY_ID} (expect 20), secret length: ${#SECRET} (expect 40)"
-          echo "::add-mask::$KEY_ID"
-          echo "::add-mask::$SECRET"
-          { echo "AWS_ACCESS_KEY_ID=$KEY_ID"; echo "AWS_SECRET_ACCESS_KEY=$SECRET"; } >> "$GITHUB_ENV"
-
       - name: Run end-to-end test
         env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           AWS_REGION: ap-south-1
         run: |
           aws sts get-caller-identity --query Arn --output text
@@ -36,6 +26,8 @@ jobs:
       - name: Safety teardown
         if: failure() || cancelled()
         env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           AWS_REGION: ap-south-1
         run: |
           IDS=$(aws ec2 describe-instances --filters Name=tag:Name,Values=hello-nginx-e2e \
