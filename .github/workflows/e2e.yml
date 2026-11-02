@@ -18,8 +18,10 @@ jobs:
         env:
           AWS_CREDENTIALS: ${{ secrets.AWS_CREDENTIALS }}   # stored as ACCESS_KEY_ID:SECRET_ACCESS_KEY
         run: |
-          KEY_ID="${AWS_CREDENTIALS%%:*}"
-          SECRET="${AWS_CREDENTIALS#*:}"
+          CREDS=$(printf '%s' "$AWS_CREDENTIALS" | tr -d '\r\n\t ')
+          KEY_ID="${CREDS%%:*}"
+          SECRET="${CREDS#*:}"
+          echo "key id length: ${#KEY_ID} (expect 20), secret length: ${#SECRET} (expect 40)"
           echo "::add-mask::$KEY_ID"
           echo "::add-mask::$SECRET"
           { echo "AWS_ACCESS_KEY_ID=$KEY_ID"; echo "AWS_SECRET_ACCESS_KEY=$SECRET"; } >> "$GITHUB_ENV"
