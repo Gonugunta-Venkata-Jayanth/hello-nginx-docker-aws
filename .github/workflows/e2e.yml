@@ -1,0 +1,49 @@
+name: E2E deploy test
+
+# Manual only: deploys to EC2 and ECS in my AWS account, checks port 8081, then tears down.
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  e2e:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Load AWS credentials
+        env:
+          AWS_CREDENTIALS: ${{ secrets.AWS_CREDENTIALS }}   # stored as ACCESS_KEY_ID:SECRET_ACCESS_KEY
+        run: |
+          KEY_ID="${AWS_CREDENTIALS%%:*}"
+          SECRET="${AWS_CREDENTIALS#*:}"
+          echo "::add-mask::$KEY_ID"
+          echo "::add-mask::$SECRET"
+          { echo "AWS_ACCESS_KEY_ID=$KEY_ID"; echo "AWS_SECRET_ACCESS_KEY=$SECRET"; } >> "$GITHUB_ENV"
+
+      - name: Run end-to-end test
+        env:
+          AWS_REGION: ap-south-1
+        run: |
+          aws sts get-caller-identity --query Arn --output text
+          ./scripts/e2e-test.sh
+
+      - name: Safety teardown
+        if: failure() || cancelled()
+        env:
+          AWS_REGION: ap-south-1
+        run: |
+          IDS=$(aws ec2 describe-instances --filters Name=tag:Name,Values=hello-nginx-e2e \
+            Name=instance-state-name,Values=pending,running,stopping,stopped \
+            --query 'Reservations[].Instances[].InstanceId' --output text)
+          INSTANCE_ID="$IDS" ./scripts/teardown.sh || true
+          if [ -n "$IDS" ]; then
+            # shellcheck disable=SC2086
+            aws ec2 wait instance-terminated --instance-ids $IDS || true
+          fi
+          SG=$(aws ec2 describe-security-groups --filters Name=group-name,Values=hello-nginx-ec2-sg \
+            --query 'SecurityGroups[0].GroupId' --output text)
+          [ "$SG" != "None" ] && aws ec2 delete-security-group --group-id "$SG" || true
