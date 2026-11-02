@@ -1,0 +1,27 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Lint shell scripts
+        run: shellcheck --severity=warning scripts/*.sh ecs/*.sh
+
+      - name: Validate task definition JSON
+        run: jq empty ecs/task-definition.json
+
+      - name: Build image
+        run: docker build -t hello-nginx:ci .
+
+      - name: Run container and check port 8081
+        run: |
+          docker run -d --name app -p 8081:8081 hello-nginx:ci
+          for i in $(seq 1 10); do curl -fsS http://localhost:8081/health && break; sleep 1; done
+          curl -fsS http://localhost:8081/ | grep -q "Hello, World!"

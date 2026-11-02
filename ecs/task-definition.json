@@ -1,0 +1,29 @@
+{
+  "family": "hello-nginx",
+  "requiresCompatibilities": ["FARGATE"],
+  "networkMode": "awsvpc",
+  "cpu": "256",
+  "memory": "512",
+  "runtimePlatform": { "operatingSystemFamily": "LINUX", "cpuArchitecture": "X86_64" },
+  "executionRoleArn": "arn:aws:iam::ACCOUNT_ID:role/ecsTaskExecutionRole",
+  "containerDefinitions": [
+    {
+      "name": "hello-nginx",
+      "image": "ACCOUNT_ID.dkr.ecr.REGION.amazonaws.com/hello-nginx:latest",
+      "essential": true,
+      "portMappings": [{ "containerPort": 8081, "protocol": "tcp" }],
+      "healthCheck": {
+        "command": ["CMD-SHELL", "wget -qO- http://127.0.0.1:8081/health || exit 1"],
+        "interval": 30, "timeout": 5, "retries": 3, "startPeriod": 10
+      },
+      "logConfiguration": {
+        "logDriver": "awslogs",
+        "options": {
+          "awslogs-group": "/ecs/hello-nginx",
+          "awslogs-region": "REGION",
+          "awslogs-stream-prefix": "app"
+        }
+      }
+    }
+  ]
+}
