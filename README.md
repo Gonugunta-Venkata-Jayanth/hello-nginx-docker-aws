@@ -34,6 +34,7 @@ flowchart LR
 | `scripts/ec2-setup.sh` | Installs Docker on a fresh EC2 instance, then builds and runs the app |
 | `ecs/task-definition.json` | Fargate task definition for the same image |
 | `ecs/deploy-ecs.sh` | Pushes to ECR and creates the ECS cluster and service |
+| `scripts/e2e-test.sh` | End-to-end test: deploys to EC2 and ECS, checks both on 8081, tears down |
 | `scripts/teardown.sh` | Deletes the ECS resources (and optionally the EC2 instance) so nothing keeps billing |
 | `.github/workflows/ci.yml` | Lints the scripts, builds the image, and checks the page on 8081 |
 
